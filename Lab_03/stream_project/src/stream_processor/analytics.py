@@ -1,7 +1,8 @@
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
-from itertools import islice, groupby, chain, pairwise, accumulate
+from itertools import accumulate, chain, groupby, islice, pairwise
 from typing import Any
+
 from stream_processor.models import GradeRecord
 
 
@@ -43,7 +44,7 @@ def calculate_stream_statistics(records: Iterable[GradeRecord]) -> dict[str, Any
 def sum_grades_with_genexp(records: Iterable[GradeRecord]) -> float:
     """Використання generator expression для підрахунку суми балів без створення list."""
     grades_gen = (record.grade for record in records)
-    return sum(grades_gen)
+    return float(sum(grades_gen))
 
 
 def lazy_students_above_average(
@@ -55,18 +56,17 @@ def lazy_students_above_average(
     Акумулює суму та кількість балів на студента, а потім ліниво віддає тих,
     у кого середній бал > threshold.
     """
-    totals: dict[int, list[ Any]] = defaultdict(lambda: ["", 0.0, 0])
+    totals: dict[int, list[Any]] = defaultdict(lambda: ["", 0.0, 0])
     for rec in records:
         entry = totals[rec.student_id]
         entry[0] = rec.name
         entry[1] += rec.grade
         entry[2] += 1
 
-    # Generator expression для обчислення середніх балів кожного студента
     student_averages = (
-        (student_id, data[0], round(data[1] / data[2], 2))
+        (student_id, str(data[0]), round(float(data[1]) / int(data[2]), 2))
         for student_id, data in totals.items()
-        if data[2] > 0
+        if int(data[2]) > 0
     )
 
     for student_id, name, avg_grade in student_averages:
@@ -96,7 +96,9 @@ def group_by_discipline(records: Iterable[GradeRecord]) -> dict[str, dict[str, A
     return result
 
 
-def group_by_student(records: Iterable[GradeRecord], limit_students: int = 5) -> dict[int, list[float]]:
+def group_by_student(
+    records: Iterable[GradeRecord], limit_students: int = 5
+) -> dict[int, list[float]]:
     """Групування оцінок за student_id через itertools.groupby (повертає перших limit_students)."""
     sorted_records = sorted(records, key=lambda r: r.student_id)
     grouped: dict[int, list[float]] = {}

@@ -1,8 +1,9 @@
 from collections.abc import Iterable, Iterator
+from typing import Any
 from stream_processor.models import GradeRecord
 
 
-def validate_grades(rows: Iterable[dict[str, str]]) -> Iterator[GradeRecord]:
+def validate_grades(rows: Iterable[dict[str, Any]]) -> Iterator[GradeRecord]:
     """Streaming validation оцінок та полів запису студента."""
     for row in rows:
         try:
@@ -10,7 +11,7 @@ def validate_grades(rows: Iterable[dict[str, str]]) -> Iterator[GradeRecord]:
             name = row["name"].strip()
             discipline = row["discipline"].strip()
             grade = float(row["grade"])
-        except (ValueError, TypeError, KeyError):
+        except (ValueError, TypeError, KeyError, AttributeError):
             continue
 
         if student_id <= 0 or not name or not discipline:
@@ -31,8 +32,9 @@ def filter_by_discipline(
     target_discipline: str | None = None,
 ) -> Iterator[GradeRecord]:
     """Generator для filtering: фільтрує записи за назвою дисципліни."""
+    target = target_discipline.strip().lower() if target_discipline is not None else None
     for record in records:
-        if target_discipline is None or record.discipline.lower() == target_discipline.lower():
+        if target is None or record.discipline.lower() == target:
             yield record
 
 

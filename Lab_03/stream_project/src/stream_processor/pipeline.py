@@ -1,10 +1,15 @@
 import csv
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
-from collections.abc import Iterable, Iterator, Callable
+
+from stream_processor.filters import (
+    filter_by_discipline,
+    filter_by_min_grade,
+    validate_grades,
+)
 from stream_processor.models import GradeRecord
-from stream_processor.readers import read_lines, clean_lines
 from stream_processor.parsers import parse_csv_rows
-from stream_processor.filters import validate_grades, filter_by_discipline, filter_by_min_grade
+from stream_processor.readers import clean_lines, read_lines
 from stream_processor.transformations import normalize_records
 
 
@@ -35,13 +40,18 @@ def process_eager(
 
     all_rows = list(csv.DictReader(all_lines))
     valid_records = list(validate_grades(all_rows))
+    target = discipline.strip().lower() if discipline is not None else None
     filtered_disc = [
         r for r in valid_records
-        if discipline is None or r.discipline.lower() == discipline.lower()
+        if target is None or r.discipline.lower() == target
     ]
     filtered_grade = [r for r in filtered_disc if r.grade >= min_grade]
     normalized = [
-        r._replace(name=r.name.title(), discipline=r.discipline.strip(), grade=round(r.grade, 2))
+        r._replace(
+            name=r.name.title(),
+            discipline=r.discipline.strip(),
+            grade=round(r.grade, 2),
+        )
         for r in filtered_grade
     ]
     return normalized

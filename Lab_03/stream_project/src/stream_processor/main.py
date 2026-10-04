@@ -1,32 +1,36 @@
 import time
 import tracemalloc
+from collections.abc import Callable
+from contextlib import closing
 from itertools import islice
 from pathlib import Path
+from typing import Any
 
-from stream_processor.models import GradeRange, GradeRecord
-from stream_processor.readers import generate_test_dataset
-from stream_processor.batches import batched_records
-from stream_processor.pipeline import (
-    build_pipeline,
-    process_eager,
-    find_first_lazy,
-    find_first_eager,
-)
 from stream_processor.analytics import (
-    calculate_stream_statistics,
-    streaming_average_grade,
-    sum_grades_with_genexp,
-    lazy_students_above_average,
     build_top_n_rating,
+    calculate_stream_statistics,
+    demonstrate_itertools_features,
     group_by_discipline,
     group_by_student,
-    demonstrate_itertools_features,
+    lazy_students_above_average,
+    streaming_average_grade,
+    sum_grades_with_genexp,
 )
+from stream_processor.batches import batched_records
+from stream_processor.models import GradeRange, GradeRecord
+from stream_processor.pipeline import (
+    build_pipeline,
+    find_first_eager,
+    find_first_lazy,
+    process_eager,
+)
+from stream_processor.readers import generate_test_dataset
 
 
-def measure_execution(func, *args):
+def measure_execution(func: Callable[..., Any], *args: Any) -> tuple[Any, float, float]:
     """Вимірює elapsed time (с) та peak memory (КБ) за допомогою tracemalloc."""
     tracemalloc.start()
+    tracemalloc.reset_peak()
     start_time = time.perf_counter()
     result = func(*args)
     elapsed = time.perf_counter() - start_time
@@ -35,12 +39,12 @@ def measure_execution(func, *args):
     return result, elapsed, peak_bytes / 1024.0
 
 
-def benchmark_eager(path: Path) -> dict:
+def benchmark_eager(path: Path) -> dict[str, Any]:
     records = process_eager(path, discipline="Programming", min_grade=60.0)
     return calculate_stream_statistics(records)
 
 
-def benchmark_lazy(path: Path) -> dict:
+def benchmark_lazy(path: Path) -> dict[str, Any]:
     pipeline = build_pipeline(path, discipline="Programming", min_grade=60.0)
     return calculate_stream_statistics(pipeline)
 
@@ -53,8 +57,8 @@ def measure_time_to_first_result(path: Path) -> tuple[float, float]:
     eager_ttfr = time.perf_counter() - t0
 
     t1 = time.perf_counter()
-    lazy_pipe = build_pipeline(path, discipline="Programming", min_grade=90.0)
-    _ = next(lazy_pipe, None)
+    with closing(build_pipeline(path, discipline="Programming", min_grade=90.0)) as lazy_pipe:
+        _ = next(lazy_pipe, None)
     lazy_ttfr = time.perf_counter() - t1
 
     return eager_ttfr, lazy_ttfr
@@ -74,8 +78,8 @@ def main() -> None:
     print(f"Файл створено: {main_csv} (100 000 records)")
 
     print("\n=== 3. Потокова обробка (Варіант 7: Programming, grade >= 60) ===")
-    pipeline = build_pipeline(main_csv, discipline="Programming", min_grade=60.0)
-    first_5 = list(islice(pipeline, 5))
+    with closing(build_pipeline(main_csv, discipline="Programming", min_grade=60.0)) as pipeline:
+        first_5 = list(islice(pipeline, 5))
     print("Перші 5 записів з потоку (через islice):")
     for rec in first_5:
         print(f"  ID: {rec.student_id} | {rec.name} | {rec.discipline} | {rec.grade}")
@@ -120,7 +124,8 @@ def main() -> None:
     print("Розміри отриманих батчів:", batch_counts)
 
     print("\n=== 7. Додаткові засоби itertools (pairwise, accumulate, chain) ===")
-    it_demo = demonstrate_itertools_features(build_pipeline(main_csv))
+    with closing(build_pipeline(main_csv)) as pipe_for_demo:
+        it_demo = demonstrate_itertools_features(pipe_for_demo)
     print("  Вибірка оцінок:", it_demo["sample_grades"])
     print("  Pairwise різниці:", it_demo["pairwise_diffs"])
     print("  Accumulate суми:", it_demo["accumulate_totals"])
@@ -148,12 +153,16 @@ def main() -> None:
 
     print("\n=== 9. Дослідження Early Termination (на прикладі 500 000 записів) ===")
     large_path = data_dir / "dataset_500000.csv"
-    predicate = lambda r: r.discipline == "Philosophy" and r.grade >= 98.0
+
+    def predicate(r: GradeRecord) -> bool:
+        return r.discipline == "Philosophy" and r.grade >= 98.0
+
+    def run_lazy_find(p: Path, pred: Callable[[GradeRecord], bool]) -> GradeRecord | None:
+        with closing(build_pipeline(p)) as stream:
+            return find_first_lazy(stream, pred)
 
     _, eager_et_time, eager_et_mem = measure_execution(find_first_eager, large_path, predicate)
-    _, lazy_et_time, lazy_et_mem = measure_execution(
-        lambda p, pred: find_first_lazy(build_pipeline(p), pred), large_path, predicate
-    )
+    _, lazy_et_time, lazy_et_mem = measure_execution(run_lazy_find, large_path, predicate)
     print(f"Eager find_first: time={eager_et_time:.5f} s, peak_mem={eager_et_mem:.2f} KB")
     print(f"Lazy  find_first: time={lazy_et_time:.5f} s, peak_mem={lazy_et_mem:.2f} KB")
 
