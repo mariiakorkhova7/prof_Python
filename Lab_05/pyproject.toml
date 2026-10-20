@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "grading-importer"
+name = "reliable-importer"
 version = "0.1.0"
 description = "Надійний імпортер системи оцінювання студентів"
 readme = "README.md"
