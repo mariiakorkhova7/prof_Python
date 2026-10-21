@@ -1,0 +1,7 @@
+student_id,name,discipline,grade
+1,Антон Шевченко,Math,95.5
+2,Олена Коваленко,Physics,105.0
+3,,Python,88.0
+4,Ігор Петренко,Chemistry,90.0
+5,Марія Корхова,Python,75.0
+abc,Невалідний Айді,Math,60.0
