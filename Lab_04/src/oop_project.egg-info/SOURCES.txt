@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/domain_app/__init__.py
+src/domain_app/dto.py
+src/domain_app/main.py
+src/domain_app/models.py
+src/domain_app/protocols.py
+src/domain_app/repositories.py
+src/domain_app/services.py
+src/domain_app/value_objects.py
+src/oop_project.egg-info/PKG-INFO
+src/oop_project.egg-info/SOURCES.txt
+src/oop_project.egg-info/dependency_links.txt
+src/oop_project.egg-info/requires.txt
+src/oop_project.egg-info/top_level.txt
