@@ -1,0 +1,11 @@
+input:
+  path: data/grades.csv
+output:
+  path: output/grades.json
+processing:
+  allowed_disciplines: ["Math", "Physics", "Python", "History"]
+  passing_grade: 60.0
+  skip_invalid: true
+logging:
+  level: INFO
+  path: logs/application.log
